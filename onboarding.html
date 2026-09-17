@@ -1,0 +1,120 @@
+<script>
+/* ===========================================================================
+   ONBOARDING TOUR — driver.js@1.3.1 first-run spotlight
+   Fires once per browser (localStorage guard).
+   Force-restart: ?tour=1 in the URL.
+   External trigger: window.startOnboarding({firstRun, name})
+   =========================================================================== */
+(function() {
+  var DONE_KEY = 'wbr_onboarding_done';
+
+  // try-catch on all localStorage calls — defensive for restrictive iframe contexts
+  function lsGet(k)  { try { return localStorage.getItem(k);  } catch(e) { return null; } }
+  function lsSet(k,v){ try { localStorage.setItem(k, v);      } catch(e) {} }
+  function lsDel(k)  { try { localStorage.removeItem(k);      } catch(e) {} }
+
+  // ?tour=1 clears the guard so the tour re-runs
+  if (location.search.indexOf('tour=1') !== -1) lsDel(DONE_KEY);
+
+  window.startOnboarding = function(opts) {
+    opts = opts || {};
+    // Non-firstRun calls (e.g. "Take a tour" button) respect the guard
+    if (!opts.firstRun && lsGet(DONE_KEY)) return;
+
+    var _tries = 0;
+    function run() {
+      // driver.js IIFE exports via: this.driver=this.driver||{}; this.driver.js={driver:...}
+      var lib = window.driver && window.driver.js;
+      var d   = lib && lib.driver;
+      if (!d) {
+        if (++_tries > 25) { console.warn('[onboarding] driver.js did not load after 5s'); return; }
+        setTimeout(run, 200);
+        return;
+      }
+
+      var allSteps = [
+        {
+          popover: {
+            title: 'Welcome' + (opts.name ? ', ' + opts.name + '!' : '!'),
+            description: 'The Supply WBR dashboard gives you a weekly view of supplier health across the full lifecycle — Curation, Acquisition &amp; Activation, and Commercial &amp; On-Trip.',
+            side: 'bottom',
+            align: 'start'
+          }
+        },
+        {
+          element: '#sidebar',
+          popover: {
+            title: 'Navigation',
+            description: 'Switch between lifecycle tabs: Overview, Curation, Acquisition &amp; Activation, and Commercial &amp; On-Trip. Each tab shows the metrics most relevant to that stage.',
+            side: 'right'
+          }
+        },
+        {
+          element: '#gran-toggle',
+          popover: {
+            title: 'Granularity',
+            description: 'Switch between Weekly, Monthly, Quarterly, and Yearly views. All charts and tables re-bucket in-browser — no server round-trip needed.',
+            side: 'bottom'
+          }
+        },
+        {
+          element: '#week-wrap',
+          popover: {
+            title: 'As-of week',
+            description: 'Anchor the view to any completed week. The dashboard shows the 12 most recent weeks ending here, plus a prior-year line for YoY context.',
+            side: 'bottom'
+          }
+        },
+        {
+          element: '#filter-slots',
+          popover: {
+            title: 'Filters',
+            description: 'Slice all metrics by channel, business model, or corridor. When a filter is active, RAG dots and target lines are hidden — they are only meaningful at the total level.',
+            side: 'bottom'
+          }
+        },
+        {
+          element: '#refresh-btn',
+          popover: {
+            title: 'Refresh &amp; cache',
+            description: 'Data is pre-warmed from nightly snapshot artifacts (~3-5s). The badge next to this button shows whether you\'re seeing cached or live data. Hit Refresh to force a fresh load.',
+            side: 'bottom'
+          }
+        },
+        {
+          element: '.metric-block',
+          popover: {
+            title: 'Metric cards',
+            description: 'Each card shows a trend chart, YoY and L12W summaries, and a RAG dot vs target. Dimension pills below the chart break it down by channel or corridor.',
+            side: 'top'
+          }
+        },
+        {
+          element: '#btn-glossary',
+          popover: {
+            title: 'Glossary &amp; tour',
+            description: 'Glossary lists every metric\'s definition and supported dimensions. Click "Take a tour" any time to replay this walkthrough.',
+            side: 'bottom'
+          }
+        }
+      ];
+
+      // Anchor safety: skip steps whose target element isn't in the DOM yet
+      var steps = allSteps.filter(function(s) {
+        return !s.element || !!document.querySelector(s.element);
+      });
+
+      var tour = d({
+        showProgress: true,
+        animate: true,
+        overlayColor: 'rgba(0,0,0,0.5)',
+        steps: steps,
+        onDestroyed: function() { lsSet(DONE_KEY, '1'); }
+      });
+      tour.drive();
+    }
+
+    run();
+  };
+})();
+</script>

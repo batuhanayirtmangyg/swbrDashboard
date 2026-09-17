@@ -1,0 +1,394 @@
+<style>
+#fb-float-btn {
+  position: fixed; bottom: 24px; right: 24px; z-index: 140;
+  background: var(--dark); color: #fff; border: none; border-radius: 24px;
+  padding: 10px 18px; font: 700 13px 'Century Gothic', Arial;
+  cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.28);
+  display: flex; align-items: center; gap: 6px; transition: background .15s;
+}
+#fb-float-btn:hover { background: var(--orange); }
+#fb-float-btn.fb-done { background: #16a34a; }
+
+#fb-overlay {
+  display: none; position: fixed; inset: 0; z-index: 145;
+  background: rgba(2,2,38,.18);
+}
+#fb-panel {
+  position: fixed; top: 0; right: 0; height: 100vh; width: 440px; z-index: 150;
+  background: #fff; box-shadow: -6px 0 32px rgba(0,0,0,.18);
+  display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform .22s ease;
+  font-family: 'Century Gothic', 'Gill Sans', Arial, sans-serif;
+}
+#fb-panel.fb-open { transform: translateX(0); }
+.fb-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  background: var(--dark); color: #fff; flex-shrink: 0;
+}
+.fb-hd-title { font-size: 14px; font-weight: 700; letter-spacing: .04em; }
+.fb-close { border: none; background: none; color: rgba(255,255,255,.7); font-size: 22px; cursor: pointer; line-height: 1; padding: 0; }
+.fb-close:hover { color: #fff; }
+.fb-body { overflow-y: auto; flex: 1; padding: 0 0 24px; }
+.fb-section { padding: 16px 20px 0; }
+.fb-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--dark-2); margin-bottom: 8px; }
+.fb-req { color: var(--orange); }
+
+/* context chips */
+.fb-ctx-row { display: flex; flex-wrap: wrap; gap: 5px; }
+.fb-chip {
+  font-size: 11px; background: #f1f3f5; color: #444; padding: 3px 8px;
+  border-radius: 10px; white-space: nowrap;
+}
+
+/* emoji row */
+.fb-emoji-row { display: flex; gap: 6px; }
+.fb-emoji-btn {
+  flex: 1; padding: 8px 0; border: 2px solid var(--border); border-radius: 8px;
+  background: none; cursor: pointer; font-size: 20px; text-align: center;
+  transition: border-color .1s, background .1s;
+}
+.fb-emoji-btn:hover { border-color: var(--orange); background: var(--orange-faint); }
+.fb-emoji-btn.fb-sel { border-color: var(--orange); background: var(--orange-faint); }
+.fb-emoji-lbl { font-size: 9px; display: block; color: var(--dark-2); margin-top: 2px; }
+
+/* selects / inputs */
+.fb-select, .fb-textarea {
+  width: 100%; padding: 8px 10px; border: 1.5px solid var(--border);
+  border-radius: 8px; font: 13px 'Century Gothic', Arial; color: var(--dark);
+  background: #fff; box-sizing: border-box;
+}
+.fb-select:focus, .fb-textarea:focus { outline: 0; border-color: var(--orange); }
+.fb-textarea { resize: vertical; min-height: 72px; }
+
+/* checklist */
+.fb-check-list { display: flex; flex-direction: column; gap: 6px; }
+.fb-check-item { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-size: 13px; color: var(--dark); }
+.fb-check-item input[type=checkbox] { margin-top: 2px; accent-color: var(--orange); flex-shrink: 0; }
+
+/* radio row for Q7 */
+.fb-radio-row { display: flex; flex-direction: column; gap: 6px; }
+.fb-radio-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--dark); cursor: pointer; }
+.fb-radio-item input[type=radio] { accent-color: var(--orange); }
+
+/* checkbox row Q9 */
+.fb-q9-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--dark); }
+.fb-q9-row input[type=checkbox] { accent-color: var(--orange); }
+
+/* submit */
+.fb-submit-row { padding: 20px 20px 0; }
+.fb-submit-btn {
+  width: 100%; padding: 12px; background: var(--orange); color: #fff; border: none;
+  border-radius: 8px; font: 700 14px 'Century Gothic', Arial; cursor: pointer;
+}
+.fb-submit-btn:hover { background: var(--blue-hover); }
+.fb-submit-btn:disabled { background: var(--neutral-fg); cursor: not-allowed; }
+.fb-divider { border: none; border-top: 1px solid var(--border); margin: 16px 20px 0; }
+</style>
+
+<button id="fb-float-btn" onclick="openFb()">
+  <span id="fb-float-icon">💬</span> Give feedback
+</button>
+<div id="fb-overlay" onclick="closeFb()"></div>
+<div id="fb-panel">
+  <div class="fb-hd">
+    <span class="fb-hd-title">Dashboard Feedback</span>
+    <button class="fb-close" onclick="closeFb()">×</button>
+  </div>
+  <div class="fb-body">
+    <!-- Section 0: auto-captured context -->
+    <div class="fb-section">
+      <div class="fb-label">Context attached</div>
+      <div class="fb-ctx-row" id="fb-ctx-chips"></div>
+    </div>
+
+    <hr class="fb-divider">
+
+    <!-- Q1: Usability (required, one-tap) -->
+    <div class="fb-section">
+      <div class="fb-label">Q1 · How usable is this dashboard right now? <span class="fb-req">*</span></div>
+      <div class="fb-emoji-row" id="fb-q1-row"></div>
+    </div>
+
+    <!-- Q2: Type (required, reveals progressive) -->
+    <div class="fb-section" style="margin-top:12px">
+      <div class="fb-label">Q2 · What kind of feedback? <span class="fb-req">*</span></div>
+      <select class="fb-select" id="fb-q2" onchange="onFbQ2()">
+        <option value="">— select —</option>
+        <option value="wrong">🐞 Something looks wrong / doesn't match</option>
+        <option value="number_off">📊 A number seems off or contradicts another chart</option>
+        <option value="cut_missing">🧩 A cut or breakdown I need is missing</option>
+        <option value="target">🎯 A target / benchmark is missing or wrong</option>
+        <option value="visual">🎨 Visual / layout / readability</option>
+        <option value="feature">💡 Feature request / idea</option>
+        <option value="understand">❓ I don't understand a metric or label</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+
+    <!-- Q3: Area (prefilled) -->
+    <div class="fb-section" style="margin-top:12px">
+      <div class="fb-label">Q3 · Which area?</div>
+      <select class="fb-select" id="fb-q3">
+        <option value="overview">Overview</option>
+        <option value="curation">Curation</option>
+        <option value="acquisition">Acquisition &amp; Activation</option>
+        <option value="commercial">Commercial &amp; On-Trip</option>
+        <option value="performance">Supply Performance</option>
+        <option value="general">Whole dashboard / General</option>
+      </select>
+    </div>
+
+    <!-- Progressive: Q4-Q9, revealed after Q2 -->
+    <div id="fb-progressive" style="display:none">
+      <hr class="fb-divider">
+
+      <!-- Q4: Checklist (swapped by Q2) — hidden for "understand" type -->
+      <div class="fb-section" id="fb-q4-wrap">
+        <div class="fb-label">Q4 · What specifically?</div>
+        <div class="fb-check-list" id="fb-q4-list"></div>
+      </div>
+
+      <!-- Q5: Which metric -->
+      <div class="fb-section" style="margin-top:12px">
+        <div class="fb-label">Q5 · Which metric? <span style="color:var(--neutral-fg);font-weight:400;text-transform:none">(optional)</span></div>
+        <select class="fb-select" id="fb-q5">
+          <option value="">— any / not specific —</option>
+        </select>
+      </div>
+
+      <!-- Q6: Free text -->
+      <div class="fb-section" style="margin-top:12px">
+        <div class="fb-label">Q6 · Tell us more <span style="color:var(--neutral-fg);font-weight:400;text-transform:none">(optional)</span></div>
+        <textarea class="fb-textarea" id="fb-q6" maxlength="500"
+          placeholder="What did you expect vs what you saw? If it's a number mismatch, which two numbers disagree and where?"></textarea>
+      </div>
+
+      <!-- Q7: Blocking -->
+      <div class="fb-section" style="margin-top:12px">
+        <div class="fb-label">Q7 · Does this block you? <span style="color:var(--neutral-fg);font-weight:400;text-transform:none">(optional)</span></div>
+        <div class="fb-radio-row">
+          <label class="fb-radio-item"><input type="radio" name="fb-q7" value="blocking"> 🔴 Yes — I can't trust/use this view</label>
+          <label class="fb-radio-item"><input type="radio" name="fb-q7" value="annoying"> 🟡 Annoying but I can work around it</label>
+          <label class="fb-radio-item"><input type="radio" name="fb-q7" value="suggestion"> 🟢 Just a suggestion</label>
+        </div>
+      </div>
+
+      <!-- Q8: Screenshot -->
+      <div class="fb-section" style="margin-top:12px">
+        <div class="fb-label">Q8 · Screenshot <span style="color:var(--neutral-fg);font-weight:400;text-transform:none">(optional)</span></div>
+        <textarea class="fb-textarea" id="fb-q8" style="min-height:48px" maxlength="500"
+          placeholder="Paste a URL or briefly describe what you're seeing"></textarea>
+      </div>
+
+      <!-- Q9: Follow-up -->
+      <div class="fb-section" style="margin-top:12px">
+        <label class="fb-q9-row">
+          <input type="checkbox" id="fb-q9" checked>
+          <span>You can email me about this</span>
+          <span id="fb-q9-email" style="color:var(--neutral-fg);font-size:11px"></span>
+        </label>
+      </div>
+
+      <div class="fb-submit-row">
+        <button class="fb-submit-btn" id="fb-submit-btn" onclick="submitFb()">Submit feedback</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var HAS_BACKEND = !!(window.google && window.google.script && window.google.script.run);
+
+  var _fbCtx = {};
+  var _fbQ1 = null;
+
+  var Q4_OPTS = {
+    wrong:      ['Two charts show different values for the same thing','QTD / totals don\'t add up to the weeks','YoY % and the absolute value tell different stories','A RAG color doesn\'t match the actual-vs-target math','Number looks too good / too bad to be real','Value changed unexpectedly after I filtered'],
+    number_off: ['Two charts show different values for the same thing','QTD / totals don\'t add up to the weeks','YoY % and the absolute value tell different stories','A RAG color doesn\'t match the actual-vs-target math','Number looks too good / too bad to be real','Value changed unexpectedly after I filtered'],
+    cut_missing:['Need to split by a dimension that isn\'t offered','A filter has no effect where I\'d expect one','Buckets overlap or leave a silent "Other"','Grain unclear (country vs country-group, week vs L4W)','Want a metric that isn\'t here at all'],
+    target:     ['No target shown where there should be one','Target looks wrong / stale','RAG (green/amber/red) seems incorrect','Target disappeared when I applied a filter'],
+    visual:     ['Hard to read / too dense','Chart axis misleading (doesn\'t start at zero / exaggerates)','Colors confusing or clash','Broken on mobile / projector / small screen','Title or units unclear (%, pp, €, K/M)','Can\'t tell RAG apart (colorblind)'],
+    feature:    [],
+    understand: [],
+    other:      []
+  };
+
+  var Q1_OPTS = [
+    { val:'broken', icon:'😞', lbl:'Broken' },
+    { val:'rough',  icon:'😕', lbl:'Rough' },
+    { val:'ok',     icon:'😐', lbl:'OK' },
+    { val:'good',   icon:'🙂', lbl:'Good' },
+    { val:'great',  icon:'🤩', lbl:'Great' }
+  ];
+
+  function initFb() {
+    // Q1 emoji row
+    var row = document.getElementById('fb-q1-row');
+    row.innerHTML = Q1_OPTS.map(function(o) {
+      return '<button class="fb-emoji-btn" data-val="' + o.val + '" onclick="__fbQ1(\'' + o.val + '\')">' +
+        o.icon + '<span class="fb-emoji-lbl">' + o.lbl + '</span></button>';
+    }).join('');
+
+    // Q5 metric list
+    var q5 = document.getElementById('fb-q5');
+    if (typeof METRIC_REGISTRY !== 'undefined') {
+      METRIC_REGISTRY.forEach(function(m) {
+        var opt = document.createElement('option');
+        opt.value = m.key; opt.textContent = m.label;
+        q5.appendChild(opt);
+      });
+    }
+
+    // Q3 prefill
+    var q3 = document.getElementById('fb-q3');
+    var v = (typeof currentView !== 'undefined') ? currentView : '';
+    for (var i = 0; i < q3.options.length; i++) {
+      if (q3.options[i].value === v) { q3.selectedIndex = i; break; }
+    }
+
+    // Q9 email
+    var emailEl = document.getElementById('fb-q9-email');
+    var me = (typeof BOOT !== 'undefined' && BOOT && BOOT.aux && BOOT.aux.Users && BOOT.aux.Users.rows && BOOT.aux.Users.rows[0])
+      ? BOOT.aux.Users.rows[0][1] : '';
+    if (!me && typeof window !== 'undefined' && window.__FB_EMAIL__) me = window.__FB_EMAIL__;
+    if (me) emailEl.textContent = '(' + me + ')';
+    window.__FB_USER_EMAIL__ = me;
+  }
+
+  function captureContext() {
+    var gran   = (typeof GRAN !== 'undefined') ? GRAN : 'week';
+    var week   = (typeof selectedWeek !== 'undefined' && selectedWeek) ? selectedWeek : '';
+    var view   = (typeof currentView !== 'undefined') ? currentView : '';
+    var badge  = document.getElementById('cache-badge');
+    var cache  = badge ? badge.textContent.trim() : '';
+    var filt   = (typeof currentFilters !== 'undefined')
+      ? Object.keys(currentFilters).filter(function(k){ return currentFilters[k] && currentFilters[k].length; })
+          .map(function(k){ return k + ':' + currentFilters[k].join('/'); }).join(', ') || 'none'
+      : 'none';
+    var wkLabel = '';
+    if (week && typeof cwLabel === 'function') wkLabel = cwLabel(week, true);
+    else if (week) wkLabel = week;
+    _fbCtx = {
+      View: view, Granularity: gran, WeekLabel: wkLabel, Filters: filt,
+      CacheState: cache,
+      Browser: navigator.userAgent.replace(/\(.*?\)/g, '').trim().slice(0, 80),
+      ScreenWidth: String(window.screen.width)
+    };
+    var chips = document.getElementById('fb-ctx-chips');
+    if (chips) {
+      var parts = [view, gran, wkLabel, 'filters: ' + filt];
+      if (cache) parts.push(cache);
+      parts.push(window.screen.width + 'px');
+      chips.innerHTML = parts.map(function(p){ return p ? '<span class="fb-chip">' + p + '</span>' : ''; }).join('');
+    }
+  }
+
+  window.openFb = function() {
+    captureContext();
+    document.getElementById('fb-overlay').style.display = 'block';
+    document.getElementById('fb-panel').classList.add('fb-open');
+  };
+  window.closeFb = function() {
+    document.getElementById('fb-overlay').style.display = 'none';
+    document.getElementById('fb-panel').classList.remove('fb-open');
+  };
+  window.__fbQ1 = function(val) {
+    _fbQ1 = val;
+    document.querySelectorAll('.fb-emoji-btn').forEach(function(b) {
+      b.classList.toggle('fb-sel', b.getAttribute('data-val') === val);
+    });
+  };
+  window.onFbQ2 = function() {
+    var type = document.getElementById('fb-q2').value;
+    if (!type) return;
+    // Show progressive section
+    document.getElementById('fb-progressive').style.display = 'block';
+    // Swap Q4 checklist
+    var q4wrap = document.getElementById('fb-q4-wrap');
+    var opts = Q4_OPTS[type] || [];
+    if (type === 'understand' || !opts.length) {
+      q4wrap.style.display = 'none';
+    } else {
+      q4wrap.style.display = '';
+      document.getElementById('fb-q4-list').innerHTML = opts.map(function(o, i) {
+        return '<label class="fb-check-item"><input type="checkbox" id="fb-q4-' + i + '" value="' + o.replace(/"/g,'&quot;') + '"> ' + o + '</label>';
+      }).join('');
+    }
+  };
+
+  window.submitFb = function() {
+    if (!_fbQ1) { alert('Please pick a usability rating (Q1) before submitting.'); return; }
+    var q2 = document.getElementById('fb-q2').value;
+    if (!q2) { alert('Please select a feedback type (Q2) before submitting.'); return; }
+
+    var q4checked = [];
+    document.querySelectorAll('#fb-q4-list input[type=checkbox]:checked').forEach(function(cb) {
+      q4checked.push(cb.value);
+    });
+    var q7el = document.querySelector('input[name=fb-q7]:checked');
+
+    var payload = Object.assign({}, _fbCtx, {
+      Q1_Usability:   _fbQ1,
+      Q2_Type:        q2,
+      Q3_Area:        document.getElementById('fb-q3').value,
+      Q4_Specifics:   q4checked.join(' | '),
+      Q5_Metric:      document.getElementById('fb-q5').value,
+      Q6_Notes:       document.getElementById('fb-q6').value.trim(),
+      Q7_Blocks:      q7el ? q7el.value : '',
+      Q8_Screenshot:  document.getElementById('fb-q8').value.trim(),
+      Q9_FollowupOK:  document.getElementById('fb-q9').checked ? 'yes' : 'no'
+    });
+
+    var btn = document.getElementById('fb-submit-btn');
+    btn.disabled = true; btn.textContent = 'Submitting…';
+
+    if (HAS_BACKEND) {
+      window.google.script.run
+        .withSuccessHandler(function() { onFbSuccess(); })
+        .withFailureHandler(function(e) { btn.disabled = false; btn.textContent = 'Submit feedback'; alert('Error: ' + ((e && e.message) || e)); })
+        .submitFeedback(payload);
+    } else {
+      // local preview mock
+      setTimeout(function() { onFbSuccess(); }, 400);
+    }
+  };
+
+  function onFbSuccess() {
+    closeFb();
+    var fbBtn = document.getElementById('fb-float-btn');
+    fbBtn.classList.add('fb-done');
+    document.getElementById('fb-float-icon').textContent = '✓';
+    fbBtn.querySelector('span:last-child') && (fbBtn.querySelector('span:last-child').textContent = '');
+    // Show toast if available
+    if (typeof toast === 'function') {
+      toast('Thanks — feedback logged 👍');
+    } else {
+      var t = document.getElementById('cmt-toast');
+      if (t) { t.textContent = 'Thanks — feedback logged 👍'; t.style.display = 'block'; setTimeout(function(){ t.style.display='none'; }, 2200); }
+    }
+    setTimeout(function() {
+      fbBtn.classList.remove('fb-done');
+      document.getElementById('fb-float-icon').textContent = '💬';
+    }, 2000);
+    // reset form
+    _fbQ1 = null;
+    document.getElementById('fb-q2').value = '';
+    document.getElementById('fb-q6').value = '';
+    document.getElementById('fb-q8').value = '';
+    document.getElementById('fb-q9').checked = true;
+    document.getElementById('fb-progressive').style.display = 'none';
+    document.querySelectorAll('.fb-emoji-btn').forEach(function(b){ b.classList.remove('fb-sel'); });
+    var btn = document.getElementById('fb-submit-btn');
+    btn.disabled = false; btn.textContent = 'Submit feedback';
+  }
+
+  // Boot after DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFb);
+  } else {
+    initFb();
+  }
+})();
+</script>

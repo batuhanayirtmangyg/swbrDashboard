@@ -1,0 +1,257 @@
+<style>
+/* ===========================================================================
+   Supply WBR dashboard theme.
+   Colour palette, fonts, header, sidebar, sections, KPI cards, tables and
+   badges are lifted from the GYG Marketing Trading dashboard so the look is
+   identical. Scorecard / funnel / trend styles are new for this app.
+   =========================================================================== */
+:root{
+  --orange:#FA4F2D; --orange-hover:#E65200; --orange-faint:#FFF3EC;
+  --blue:#FA4F2D; --blue-hover:#e04427;
+  --dark:#020226; --dark-2:#450400;
+  --border:#E0E0E0; --bg:#F7F7F7; --white:#FFFFFF;
+  --green:#558136; --green-bg:#dcfce7;
+  --amber:#B45309; --amber-bg:#fef3c7;
+  --red:#C00000; --red-bg:#fee2e2;
+  --neutral-fg:#9ca3af; --neutral-bg:#eef0f2;
+  --radius:12px; --shadow:0 2px 4px rgba(0,0,0,0.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Century Gothic','Gill Sans',Arial,sans-serif;background:var(--bg);color:var(--dark);line-height:1.4}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.header{background:var(--orange);padding:14px 24px;display:flex;align-items:center;justify-content:center;position:relative}
+.header h1{font-size:18px;font-weight:700;letter-spacing:.02em;color:var(--dark)}
+.header .sub{font-size:12px;margin-top:2px;color:var(--dark);text-align:center}
+.header-logo{position:absolute;top:50%;left:24px;transform:translateY(-50%);line-height:0}
+.header-actions{position:absolute;top:50%;right:24px;transform:translateY(-50%)}
+.btn-collapse-all{padding:6px 14px;background:rgba(2,2,38,.18);border:none;border-radius:6px;font-size:11px;font-family:inherit;font-weight:700;color:var(--dark);cursor:pointer;letter-spacing:.04em;transition:background .15s}
+.btn-collapse-all:hover{background:rgba(2,2,38,.35)}
+
+/* ── Controls bar ──────────────────────────────────────────────────────── */
+.controls{padding:12px 24px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:20;box-shadow:0 1px 4px rgba(2,2,38,.06)}
+.controls label{font-size:12px;font-weight:700;color:var(--dark-2);letter-spacing:.05em;text-transform:uppercase}
+.controls select,.date-input{padding:7px 12px;border:1.5px solid #fedbd0;border-radius:6px;font-size:13px;font-family:inherit;background:#fff;cursor:pointer;color:var(--dark);font-weight:600;transition:border-color .15s}
+.controls select:focus,.date-input:focus{outline:0;border-color:var(--blue)}
+.ctrl-group{display:flex;align-items:center;gap:8px}
+.ms{position:relative;display:inline-block}
+.ms-btn{padding:7px 12px;border:1.5px solid #fedbd0;border-radius:6px;font-size:13px;font-family:inherit;background:#fff;cursor:pointer;color:var(--dark);font-weight:600;min-width:110px;text-align:left;transition:border-color .15s}
+.ms-btn:hover{border-color:var(--blue)}
+.ms-btn::after{content:'▾';float:right;margin-left:8px;color:#9ca3af}
+.ms-panel{position:absolute;z-index:50;top:calc(100% + 4px);left:0;min-width:180px;max-height:280px;overflow-y:auto;background:#fff;border:1.5px solid #fedbd0;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px}
+.ms-opt{display:block;padding:6px 8px;font-size:13px;font-weight:500;color:var(--dark);border-radius:5px;cursor:pointer;white-space:nowrap}
+.ms-opt:hover{background:var(--neutral-bg)}
+.ms-opt input{margin-right:4px;vertical-align:middle}
+.view-toggle{display:flex;border:1.5px solid var(--blue);border-radius:6px;overflow:hidden;flex-shrink:0}
+.view-btn{padding:6px 14px;background:#fff;color:var(--blue);border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.04em;transition:background .15s,color .15s}
+.view-btn+.view-btn{border-left:1.5px solid var(--blue)}
+.view-btn.active{background:var(--blue);color:#fff}
+.btn-sidebar-toggle{padding:5px 9px;background:rgba(2,2,38,.10);color:var(--dark);border:none;border-radius:6px;font-size:15px;line-height:1;cursor:pointer;transition:background .15s}
+.btn-sidebar-toggle:hover{background:rgba(2,2,38,.22)}
+.btn-refresh{margin-left:auto;padding:7px 16px;border-radius:6px;font-size:12px;font-weight:700;background:#fff;color:var(--blue);border:1.5px solid var(--blue);cursor:pointer;font-family:inherit;letter-spacing:.04em;transition:background .15s}
+.btn-refresh:hover{background:#fff3f0}
+.btn-refresh:disabled{opacity:.4;cursor:not-allowed}
+.cache-badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;background:var(--green-bg);color:var(--green);white-space:nowrap}
+.cache-badge.live{background:#d0effc;color:#005c80}
+
+/* ── Body / sidebar ────────────────────────────────────────────────────── */
+.app-body{display:flex}
+.sidebar{width:230px;min-width:230px;flex-shrink:0;background:var(--dark);position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;z-index:5;transition:width .2s,min-width .2s}
+.sidebar.collapsed{width:0;min-width:0;overflow:hidden}
+.main-content{flex:1;min-width:0}
+.sidebar-label{font-size:10px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.3);padding:20px 16px 8px;text-transform:uppercase}
+.sidebar-item{padding:12px 16px;cursor:pointer;font-size:13px;font-weight:600;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:10px;transition:background .15s,color .15s;border-left:3px solid transparent;white-space:nowrap;user-select:none}
+.sidebar-item:hover{background:rgba(255,255,255,.07);color:#fff}
+.sidebar-item.active{color:var(--orange);border-left-color:var(--orange);background:rgba(250,79,45,.1)}
+.sidebar-icon{font-size:13px;width:20px;flex-shrink:0;text-align:center}
+.sidebar-rag{margin-left:auto;width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.sidebar-rag.green{background:var(--green)} .sidebar-rag.amber{background:#d97706} .sidebar-rag.red{background:var(--red)} .sidebar-rag.hold{background:var(--neutral-fg)}
+
+/* ── Sections ──────────────────────────────────────────────────────────── */
+.sections-area{padding:24px;display:flex;flex-direction:column;gap:20px}
+.section{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow)}
+.section-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--dark);user-select:none;cursor:pointer;transition:background .15s}
+.section-header:hover{background:#0c0c40}
+.section-title{font-size:13px;font-weight:700;color:#fff;letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.section-chevron{color:#fff;font-size:14px;transition:transform 250ms ease-in-out;display:inline-block}
+.section.collapsed .section-chevron{transform:rotate(-90deg)}
+.section-body{overflow:hidden;transition:max-height 280ms ease-in-out,opacity 250ms ease-in-out;max-height:20000px;opacity:1}
+.section.collapsed .section-body{max-height:0;opacity:0}
+
+/* ── KPI / scorecard cards ─────────────────────────────────────────────── */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;padding:24px}
+.kpi-card{background:#fff;border-radius:var(--radius);padding:20px 20px 18px;border:1px solid var(--border);border-top:3px solid var(--blue);display:flex;flex-direction:column;gap:12px;transition:box-shadow .15s;box-shadow:var(--shadow)}
+.kpi-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.kpi-card.rag-green{border-top-color:var(--green)} .kpi-card.rag-amber{border-top-color:#d97706} .kpi-card.rag-red{border-top-color:var(--red)} .kpi-card.rag-hold{border-top-color:var(--neutral-fg)}
+.kpi-label{font-size:12px;font-weight:700;color:var(--dark-2);letter-spacing:.06em;text-transform:uppercase}
+.kpi-value{font-size:30px;font-weight:700;color:var(--dark);line-height:1}
+.kpi-sub{font-size:11px;color:var(--neutral-fg);font-weight:600}
+.kpi-badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge-wrap{display:flex;flex-direction:column;gap:2px}
+.badge{display:inline-block;font-size:13px;font-weight:700;padding:2px 8px;border-radius:6px}
+.badge.pos{background:var(--green-bg);color:var(--green)} .badge.neg{background:var(--red-bg);color:var(--red)} .badge.neu{background:var(--neutral-bg);color:var(--neutral-fg)}
+.badge-sub{font-size:10px;color:var(--neutral-fg);font-weight:600;padding-left:2px;text-transform:uppercase;letter-spacing:.04em}
+
+/* stage RAG scorecard (overview) */
+.scorecard-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;padding:24px}
+.scorecard{background:#fff;border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);padding:20px;display:flex;flex-direction:column;gap:10px;border-left:5px solid var(--neutral-fg);cursor:pointer;transition:box-shadow .15s}
+.scorecard:hover{box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.scorecard.green{border-left-color:var(--green)} .scorecard.amber{border-left-color:#d97706} .scorecard.red{border-left-color:var(--red)} .scorecard.hold{border-left-color:var(--neutral-fg)}
+.scorecard-title{font-size:14px;font-weight:700;color:var(--dark);letter-spacing:.02em}
+.scorecard-status{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.scorecard-status.green{color:var(--green)} .scorecard-status.amber{color:#d97706} .scorecard-status.red{color:var(--red)} .scorecard-status.hold{color:var(--neutral-fg)}
+.scorecard-detail{font-size:11px;color:var(--neutral-fg);font-weight:600}
+.scorecard-gmv{display:flex;gap:12px;font-size:12px;font-weight:700;color:var(--dark)}
+.scorecard-breakdown{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.sc-dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.sc-dot.green{background:var(--green)} .sc-dot.amber{background:#d97706} .sc-dot.red{background:var(--red)}
+.sc-cnt{font-size:12px;font-weight:700;color:var(--dark);margin-right:6px}
+
+.narrative{margin:0 24px 8px;background:var(--orange-faint);border:1px solid #fedbd0;border-left:4px solid var(--orange);border-radius:8px;padding:14px 18px}
+.narrative h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--dark-2);margin-bottom:8px}
+.narrative ul{margin:0;padding-left:18px}
+.narrative li{font-size:13px;color:var(--dark);margin:4px 0;line-height:1.5}
+
+/* funnel */
+.funnel-wrap{padding:8px 24px 24px}
+.funnel-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--dark);margin-bottom:12px}
+.funnel{display:flex;gap:10px;align-items:stretch}
+.funnel-step{flex:1;background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center;position:relative}
+.funnel-step .fs-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--dark-2)}
+.funnel-step .fs-value{font-size:22px;font-weight:700;color:var(--dark);margin-top:6px}
+.funnel-step .fs-conv{font-size:11px;color:var(--neutral-fg);font-weight:600;margin-top:4px}
+.funnel-bar{height:6px;border-radius:3px;background:var(--orange);margin-top:10px}
+
+/* ── Trend chart ───────────────────────────────────────────────────────── */
+.metric-block{padding:20px 24px 8px;border-top:1px solid var(--border)}
+.metric-block:first-child{border-top:none}
+.metric-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.metric-name{font-size:14px;font-weight:700;color:var(--dark);letter-spacing:.02em}
+.metric-lag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--amber);background:var(--amber-bg);padding:2px 7px;border-radius:5px}
+.metric-hold{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--neutral-fg);background:var(--neutral-bg);padding:2px 7px;border-radius:5px}
+.filter-note{background:#fef9c3;border:1px solid #fde047;border-radius:6px;padding:7px 14px;font-size:12px;color:#713f12;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+.metric-stats{display:flex;gap:22px;margin-left:auto;flex-wrap:wrap}
+.stat{display:flex;flex-direction:column;align-items:flex-end}
+.stat-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--neutral-fg)}
+.stat-value{font-size:16px;font-weight:700;color:var(--dark)}
+.stat-value.pos{color:var(--green)} .stat-value.neg{color:var(--red)}
+.trend-canvas-box{position:relative;height:280px;width:100%}
+.series-toggle{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.series-chip{padding:5px 12px;background:#fff;color:var(--blue);border:1.5px solid var(--blue);border-radius:16px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;letter-spacing:.03em;transition:background .15s,color .15s}
+.series-chip.off{background:#fff;color:var(--neutral-fg);border-color:var(--neutral-bg)}
+.series-chip.active{background:var(--blue);color:#fff}
+
+/* ── Detail table ──────────────────────────────────────────────────────── */
+.table-wrap{padding:8px 24px 24px;overflow-x:auto}
+table{border-collapse:collapse;font-size:12px;white-space:nowrap;width:100%;background:#fff}
+thead th{background:var(--dark);color:#fff;padding:9px 12px;border:1px solid #2a2a50;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;text-align:right}
+thead th.left{text-align:left}
+td{padding:7px 12px;border:1px solid var(--border);text-align:right}
+td.metric-name-cell{text-align:left;font-weight:700;color:var(--dark);min-width:200px}
+tbody tr:nth-child(2n) td{background:var(--bg)}
+tbody tr:nth-child(odd) td{background:#fff}
+tbody tr:hover td{background:#ededf0}
+td.pos{color:var(--green);font-weight:700} td.neg{color:var(--red);font-weight:700}
+.rag-pill{display:inline-block;width:52px;text-align:center;padding:2px 0;border-radius:5px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.rag-pill.green{background:var(--green-bg);color:var(--green)} .rag-pill.amber{background:var(--amber-bg);color:var(--amber)} .rag-pill.red{background:var(--red-bg);color:var(--red)} .rag-pill.hold{background:var(--neutral-bg);color:var(--neutral-fg)}
+td.sub-row-name{text-align:left;padding-left:28px;color:var(--dark-2);font-weight:600}
+tr.sub-row td{background:#fbfbfd;font-size:11.5px}
+.expand-btn{cursor:pointer;margin-right:6px;display:inline-block;width:16px;height:16px;line-height:15px;text-align:center;border-radius:4px;background:var(--neutral-bg);color:var(--dark);font-size:12px;font-weight:900;user-select:none}
+.expand-btn:hover{background:#dfe2e6}
+
+/* ── Misc ──────────────────────────────────────────────────────────────── */
+.msg{padding:48px;font-size:14px;text-align:center;color:var(--dark-2)}
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid #d0effc;border-top-color:var(--blue);border-radius:50%;animation:.8s linear infinite spin;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Supply Performance — dim breakdown + heatmap ──────────────────────── */
+.perf-controls{padding:14px 20px 10px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--border)}
+.perf-ctrl-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.perf-ctrl-label{font-size:10px;font-weight:700;color:var(--dark-2);letter-spacing:.06em;text-transform:uppercase;min-width:52px}
+.perf-chart-wrap{position:relative;height:340px;padding:12px 20px 16px}
+/* heatmap */
+.hm-wrap{padding:16px 20px 20px;overflow-x:auto}
+.hm-grid{display:grid;gap:3px;margin-bottom:14px}
+.hm-corner{font-size:10px;color:var(--neutral-fg);padding:6px 8px;display:flex;flex-direction:column;justify-content:flex-end;line-height:1.4}
+.hm-yl{font-weight:700;color:var(--dark-2)} .hm-xl{font-weight:700;color:var(--dark-2)}
+.hm-ch{font-size:10px;font-weight:700;color:var(--dark-2);padding:5px 4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hm-rh{font-size:10px;font-weight:600;color:var(--dark-2);padding:0 8px;display:flex;align-items:center;white-space:nowrap}
+.hm-cell{font-size:11px;font-weight:700;padding:9px 4px;text-align:center;border-radius:4px;min-height:38px;min-width:72px;display:flex;align-items:center;justify-content:center;cursor:default;transition:opacity .12s}
+.hm-cell:hover{opacity:.82}
+.hm-legend{display:flex;align-items:center;gap:8px;font-size:11px}
+.hm-lg-bar{display:flex;height:12px;border-radius:4px;overflow:hidden;width:140px;flex-shrink:0}
+.hm-lg-step{flex:1}
+.hm-lg-val{color:var(--neutral-fg);font-weight:600;white-space:nowrap}
+.hm-msg{padding:32px;text-align:center;color:var(--neutral-fg);font-size:13px}
+footer{text-align:center;padding:18px 24px 22px;font-size:12px;color:#888;font-style:italic}
+footer a{color:var(--orange);text-decoration:underline}
+
+/* ── Overview: KPIs + funnel side by side ─────────────────────────────── */
+.ov-supply-grid{display:grid;grid-template-columns:2fr 3fr;align-items:start}
+.kpi-hero{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;padding:20px}
+.funnel-panel{padding:16px 20px 20px;border-left:1px solid var(--border)}
+@media(max-width:960px){.ov-supply-grid{grid-template-columns:1fr}.funnel-panel{border-left:none;border-top:1px solid var(--border)}}
+@media(max-width:640px){.kpi-hero{grid-template-columns:1fr}}
+
+/* ── Yearly KPI comparison block ───────────────────────────────────────── */
+.kpi-year-compare{display:flex;flex-direction:column;gap:6px;padding:8px 0 4px}
+.kpi-yc-row{display:flex;align-items:baseline;gap:8px}
+.kpi-yc-val{font-size:18px;font-weight:700;color:var(--neutral-fg)}
+.kpi-yc-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--neutral-fg)}
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+@media (max-width:1024px) {
+  .sidebar{width:180px;min-width:180px}
+  .kpi-row{grid-template-columns:repeat(2,1fr)}
+  .sections-area{padding:16px;gap:14px}
+}
+@media (max-width:768px) {
+  .sidebar{position:fixed;left:0;height:100%;z-index:50;transition:left .2s}
+  .sidebar.collapsed{left:-240px;width:230px;min-width:230px;overflow:hidden}
+  .kpi-row{grid-template-columns:1fr;padding:12px}
+  .scorecard-row{grid-template-columns:1fr;padding:12px}
+  .sections-area{padding:12px;gap:10px}
+  .controls{gap:8px;padding:10px 14px}
+  .trend-canvas-box{height:200px}
+  .perf-chart-wrap{height:240px}
+  .metric-stats{display:none}
+}
+@media (max-width:480px) {
+  .kpi-value{font-size:24px}
+  .section-title{font-size:12px}
+  footer{display:none}
+}
+@media (max-width:640px) {
+  .controls{flex-direction:column;align-items:flex-start;padding:8px 12px;gap:6px}
+  .view-toggle{width:100%}
+  .view-btn{flex:1;font-size:11px;padding:6px 4px}
+  #week-wrap{width:100%}
+  #week-wrap select{width:100%}
+  #filter-slots{flex-wrap:wrap;gap:6px;width:100%}
+  .btn-refresh{margin-left:0}
+  .header-logo{display:none}
+  .header h1{font-size:15px}
+}
+
+/* ── Compare cuts: small-multiples grid ──────────────────────────────────────
+   Fixed column counts, not auto-fill. auto-fill pins every panel at its min width
+   and leaves the rest of a wide screen empty, which made 3 cuts render as three
+   280px charts against 1200px of whitespace — too small to read the very thing
+   the grid exists to compare. Widest tier is capped at 4 so a panel stays legible
+   on an ultrawide instead of shrinking to fit N members.
+   Breakpoints are on the VIEWPORT, so with the sidebar open the content area is
+   ~230px narrower than the query sees; container queries would be exact but are a
+   much bigger change for a small gain. */
+.cmp-grid{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:1599px){ .cmp-grid{grid-template-columns:repeat(3,minmax(0,1fr))} }
+@media (max-width:1199px){ .cmp-grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:799px) { .cmp-grid{grid-template-columns:minmax(0,1fr)} }
+.cmp-panel{border:1px solid var(--border);border-radius:6px;padding:8px;min-width:0}
+.cmp-panel-title{font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* minmax(0,1fr) above + this height are what let the canvas shrink with the column;
+   a grid track defaults to min-content and Chart.js canvases refuse to shrink below
+   their last laid-out width without it. */
+.cmp-canvas-box{position:relative;height:200px;width:100%}
+.cmp-panel-msg{font-size:11px;color:#9ca3af;text-align:center;margin-top:2px;min-height:14px}
+</style>

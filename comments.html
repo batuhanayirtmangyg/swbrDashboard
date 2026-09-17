@@ -1,0 +1,489 @@
+<style>
+/* ===========================================================================
+   Contextual commenting UI — markers, floating composer, thread popover,
+   @mention dropdown. Reuses the dashboard theme tokens from styles.html.
+   =========================================================================== */
+[data-comment-target]{ position:relative; }
+.cmt-marker{
+  position:absolute; top:6px; right:6px; z-index:30; min-width:20px; height:20px; padding:0 5px;
+  border-radius:11px; background:var(--orange); color:#fff; font:700 11px 'Century Gothic',Arial;
+  display:flex; align-items:center; justify-content:center; gap:3px; cursor:pointer;
+  box-shadow:0 1px 4px rgba(0,0,0,.25); user-select:none; transition:transform .1s; }
+.cmt-marker:hover{ transform:scale(1.1); }
+.cmt-marker.resolved{ background:var(--neutral-fg); }
+.cmt-hover-btn{
+  position:absolute; z-index:40; width:26px; height:26px; border-radius:50%; border:none;
+  background:var(--dark); color:#fff; font-size:13px; cursor:pointer; display:none;
+  align-items:center; justify-content:center; box-shadow:var(--shadow); }
+.cmt-hover-btn:hover{ background:var(--orange); }
+.cmt-sel-btn{
+  position:absolute; z-index:60; background:var(--dark); color:#fff; border:none; border-radius:6px;
+  padding:6px 12px; font:700 12px 'Century Gothic',Arial; cursor:pointer; display:none;
+  box-shadow:0 2px 8px rgba(0,0,0,.3); }
+.cmt-sel-btn:hover{ background:var(--orange); }
+
+.cmt-pop{
+  position:absolute; z-index:70; width:340px; max-height:70vh; overflow-y:auto; background:#fff;
+  border:1px solid var(--border); border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,.22);
+  display:none; font-family:'Century Gothic','Gill Sans',Arial,sans-serif; }
+.cmt-pop-head{ display:flex; align-items:center; justify-content:space-between; padding:12px 14px;
+  border-bottom:1px solid var(--border); position:sticky; top:0; background:#fff; border-radius:12px 12px 0 0; }
+.cmt-pop-title{ font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--dark-2); }
+.cmt-close{ border:none; background:none; font-size:18px; cursor:pointer; color:var(--neutral-fg); line-height:1; }
+.cmt-quote{ margin:8px 14px 0; padding:6px 10px; border-left:3px solid var(--orange); background:var(--orange-faint);
+  font-size:12px; color:var(--dark-2); border-radius:0 6px 6px 0; font-style:italic; }
+.cmt{ padding:12px 14px; border-bottom:1px solid #f0f0f2; }
+.cmt.resolved{ opacity:.6; }
+.cmt-meta{ display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+.cmt-avatar{ width:24px; height:24px; border-radius:50%; background:var(--dark); color:#fff;
+  font:700 11px Arial; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.cmt-author{ font-size:12px; font-weight:700; color:var(--dark); }
+.cmt-time{ font-size:10px; color:var(--neutral-fg); margin-left:auto; }
+.cmt-body{ font-size:13px; color:#222; line-height:1.5; white-space:pre-wrap; word-break:break-word; }
+.cmt-body .mention{ color:var(--orange); font-weight:700; }
+.cmt-actions{ display:flex; gap:12px; margin-top:6px; }
+.cmt-act{ border:none; background:none; padding:0; font:700 11px 'Century Gothic',Arial; color:var(--blue);
+  cursor:pointer; letter-spacing:.03em; }
+.cmt-act:hover{ text-decoration:underline; }
+.cmt-act.danger{ color:var(--red); }
+.cmt-replies{ margin:8px 0 0 20px; border-left:2px solid var(--border); padding-left:10px; }
+.cmt-reply{ padding:8px 0; }
+.cmt-empty{ padding:18px 14px; color:var(--neutral-fg); font-size:12px; text-align:center; }
+
+.cmt-composer{ padding:12px 14px; border-top:1px solid var(--border); position:relative; }
+.cmt-composer textarea{ width:100%; min-height:64px; resize:vertical; border:1.5px solid var(--border);
+  border-radius:8px; padding:8px 10px; font:13px 'Century Gothic',Arial; color:var(--dark); }
+.cmt-composer textarea:focus{ outline:0; border-color:var(--orange); }
+.cmt-composer-row{ display:flex; align-items:center; gap:8px; margin-top:8px; }
+.cmt-hint{ font-size:10px; color:var(--neutral-fg); }
+.cmt-submit{ margin-left:auto; background:var(--orange); color:#fff; border:none; border-radius:6px;
+  padding:7px 16px; font:700 12px 'Century Gothic',Arial; cursor:pointer; }
+.cmt-submit:hover{ background:var(--blue-hover); }
+.cmt-submit:disabled{ background:var(--neutral-fg); cursor:not-allowed; }
+.cmt-cancel{ background:none; border:none; color:var(--neutral-fg); font:700 12px 'Century Gothic',Arial; cursor:pointer; }
+
+.cmt-mentions{ position:absolute; z-index:80; background:#fff; border:1px solid var(--border);
+  border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.15); max-height:200px; overflow-y:auto;
+  width:260px; display:none; }
+.cmt-mention-row{ padding:8px 10px; cursor:pointer; display:flex; flex-direction:column; }
+.cmt-mention-row.active,.cmt-mention-row:hover{ background:var(--orange-faint); }
+.cmt-mention-name{ font-size:12px; font-weight:700; color:var(--dark); }
+.cmt-mention-email{ font-size:11px; color:var(--neutral-fg); }
+.cmt-toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%); z-index:200;
+  background:var(--dark); color:#fff; padding:10px 18px; border-radius:8px; font:600 13px 'Century Gothic',Arial;
+  box-shadow:0 4px 16px rgba(0,0,0,.3); display:none; }
+</style>
+
+<button class="cmt-hover-btn" id="cmt-hover-btn" title="Comment on this">💬</button>
+<button class="cmt-sel-btn" id="cmt-sel-btn">💬 Comment</button>
+<div class="cmt-pop" id="cmt-pop"></div>
+<div class="cmt-toast" id="cmt-toast"></div>
+
+<script>
+/* Contextual commenting client. Shares the global scope with javascript.html,
+   so it reads window.currentView / selectedWeek / GRAN and calls switchView().
+   Falls back to an in-memory mock when google.script.run is unavailable (local
+   preview), so the whole UX is demoable offline. */
+(function () {
+  var HAS_BACKEND = !!(window.google && window.google.script && window.google.script.run);
+  var THREADS = { me: '', users: [], comments: [], replies: [] };
+  var openTarget = null;         // target currently shown in the popover
+  var composerCtx = null;        // {targetElementId, viewKey, anchorQuote, parentCommentId}
+  var DEEP = window.__DEEPLINK__ || { commentId: '', view: '' };
+
+  // ── mock backend for local preview ─────────────────────────────────────────
+  var MOCK = { comments: [], replies: [], users: [] };
+  function mockUsers() {
+    // seed from a Users aux tab if present in the bootstrap snapshot
+    var b = window.BOOT || (typeof BOOT !== 'undefined' ? BOOT : null);
+    var u = b && b.aux && b.aux.Users;
+    if (u && u.rows) {
+      var ni = u.headers.indexOf('Name'), ei = u.headers.indexOf('Email');
+      return u.rows.map(function (r) { return { Name: r[ni], Email: r[ei] }; });
+    }
+    return [ { Name:'Batu', Email:'batuhan.ayirtman@getyourguide.com' },
+             { Name:'Ken', Email:'ken@getyourguide.com' },
+             { Name:'Vedad', Email:'vedad@getyourguide.com' } ];
+  }
+  function nowIso() { return new Date().toISOString(); }
+  function uuid() { return 'id-' + Math.abs(Math.floor((Date.now() % 1e9) + THREADS.comments.length + THREADS.replies.length)) + '-' + (THREADS.comments.length + THREADS.replies.length); }
+
+  // ── RPC wrappers (backend or mock) ──────────────────────────────────────────
+  function rpc(name, arg, cb) {
+    if (HAS_BACKEND) {
+      window.google.script.run
+        .withSuccessHandler(cb)
+        .withFailureHandler(function (e) { toast('Error: ' + (e && e.message ? e.message : e)); })
+        [name](arg);
+      return;
+    }
+    // mock
+    setTimeout(function () {
+      if (name === 'getThreads') cb({ me: (mockUsers()[0] || {}).Email || 'you@getyourguide.com', users: mockUsers(), comments: MOCK.comments.slice(), replies: MOCK.replies.slice() });
+      else if (name === 'addComment') { var c = { CommentID: uuid(), AuthorEmail: THREADS.me, TargetElementID: arg.targetElementId, Timestamp: nowIso(), TextContent: arg.text, IsResolved: false, ViewKey: arg.viewKey, AnchorQuote: arg.anchorQuote || '' }; MOCK.comments.push(c); cb(c); }
+      else if (name === 'addReply') { var r = { ReplyID: uuid(), ParentCommentID: arg.parentCommentId, AuthorEmail: THREADS.me, Timestamp: nowIso(), TextContent: arg.text }; MOCK.replies.push(r); cb(r); }
+      else if (name === 'setResolved') { MOCK.comments.forEach(function (c) { if (c.CommentID === arg.id) c.IsResolved = arg.val; }); cb(true); }
+      else if (name === 'deleteComment') { MOCK.comments = MOCK.comments.filter(function (c) { return c.CommentID !== arg; }); MOCK.replies = MOCK.replies.filter(function (r) { return r.ParentCommentID !== arg; }); cb(true); }
+      else if (name === 'deleteReply') { MOCK.replies = MOCK.replies.filter(function (r) { return r.ReplyID !== arg; }); cb(true); }
+      else if (name === 'ensureUserRegistered') { cb({ email: (mockUsers()[0] || {}).Email || '', name: (mockUsers()[0] || {}).Name || '', isNew: false }); }
+      else if (name === 'addUserToDirectory') { var ae = String((arg||{}).email||'').toLowerCase(); var af = THREADS.users.filter(function(u){ return String(u.Email).toLowerCase()===ae; })[0]; if (af) { cb({ email: af.Email, name: af.Name, alreadyExists: true }); } else { var an = String((arg||{}).name||'')||ae.split('@')[0]; var nu = { Name: an, Email: (arg||{}).email||'' }; THREADS.users.push(nu); cb({ email: nu.Email, name: nu.Name, alreadyExists: false }); } }
+    }, 80);
+  }
+
+  // ── data load ────────────────────────────────────────────────────────────────
+  function loadThreads(then) {
+    rpc('getThreads', null, function (res) {
+      THREADS = res || THREADS;
+      THREADS.comments = THREADS.comments || [];
+      THREADS.replies = THREADS.replies || [];
+      THREADS.users = THREADS.users || [];
+      refreshMarkers();
+      maybeDeepOpen();
+      if (then) then();
+    });
+  }
+
+  // Resolved comments are hidden, not deleted — the row stays in the Comments sheet with
+  // IsResolved=TRUE. Before this they were only dimmed to opacity:.6, so every comment the 7-day
+  // expireOldComments trigger auto-resolved piled up in the popover forever and the only way to
+  // clear one was to delete it. (FPOPS-79) Filtering at this one chokepoint also fixes the 💬
+  // badge count, which counted resolved threads and left a grey badge on a fully-resolved block.
+  var SHOW_RESOLVED = false;
+  function allCommentsFor(target) { return THREADS.comments.filter(function (c) { return String(c.TargetElementID) === String(target); }); }
+  function commentsFor(target) {
+    return allCommentsFor(target).filter(function (c) { return SHOW_RESOLVED || !isTrue(c.IsResolved); });
+  }
+  window.__cmtToggleResolved = function () {
+    SHOW_RESOLVED = !SHOW_RESOLVED;
+    var el = document.querySelector('[data-comment-target="' + cssEsc(openTarget) + '"]');
+    openThread(openTarget, el);
+  };
+  function repliesFor(cid) { return THREADS.replies.filter(function (r) { return String(r.ParentCommentID) === String(cid); })
+      .sort(function (a, b) { return String(a.Timestamp).localeCompare(String(b.Timestamp)); }); }
+
+  // ── markers (re-placed after every dashboard render) ─────────────────────────
+  function refreshMarkers() {
+    document.querySelectorAll('.cmt-marker').forEach(function (m) { m.remove(); });
+    var seen = {};
+    document.querySelectorAll('[data-comment-target]').forEach(function (el) {
+      var t = el.getAttribute('data-comment-target');
+      if (seen[t]) return; seen[t] = true;
+      // Markers always count OPEN comments only, whatever the popover's show-resolved state:
+      // a block whose comments are all resolved should look clean, not carry a grey badge forever.
+      var open = allCommentsFor(t).filter(function (c) { return !isTrue(c.IsResolved); });
+      if (!open.length) return;
+      var mk = document.createElement('div');
+      mk.className = 'cmt-marker';
+      mk.textContent = '💬 ' + open.length;
+      mk.title = open.length + ' open comment(s)';
+      mk.onclick = function (ev) { ev.stopPropagation(); openThread(t, el); };
+      el.appendChild(mk);
+    });
+  }
+  window.afterDashboardRender = function () { refreshMarkers(); maybeDeepOpen(); };
+
+  // ── thread popover ────────────────────────────────────────────────────────────
+  function openThread(target, anchorEl) {
+    openTarget = target;
+    var pop = document.getElementById('cmt-pop');
+    var list = commentsFor(target).sort(function (a, b) { return String(a.Timestamp).localeCompare(String(b.Timestamp)); });
+    // allCommentsFor: the anchor quote describes the block and must survive its comments being
+    // resolved. No composerCtx fallback here — that can hold a previously-opened target's quote.
+    var all0 = allCommentsFor(target)[0];
+    var quote = (all0 && all0.AnchorQuote) ? all0.AnchorQuote : '';
+    var resolvedCount = allCommentsFor(target).filter(function (c) { return isTrue(c.IsResolved); }).length;
+    var html = '<div class="cmt-pop-head"><span class="cmt-pop-title">' + esc(prettyTarget(target)) + '</span>' +
+      (resolvedCount ? '<button class="cmt-act" onclick="__cmtToggleResolved()">' +
+        (SHOW_RESOLVED ? 'Hide resolved' : 'Show resolved (' + resolvedCount + ')') + '</button>' : '') +
+      '<button class="cmt-close" onclick="__cmtClose()">×</button></div>';
+    if (quote) html += '<div class="cmt-quote">“' + esc(quote) + '”</div>';
+    html += list.length ? list.map(renderComment).join('') : '<div class="cmt-empty">No comments yet.</div>';
+    html += composerHtml({ targetElementId: target, viewKey: viewKey(), anchorQuote: quote });
+    pop.innerHTML = html;
+    pop.style.display = 'block';
+    positionPop(pop, anchorEl || document.querySelector('[data-comment-target="' + cssEsc(target) + '"]'));
+    wireComposer(pop);
+  }
+  function renderComment(c) {
+    var mine = String(c.AuthorEmail).toLowerCase() === String(THREADS.me).toLowerCase();
+    var reps = repliesFor(c.CommentID);
+    return '<div class="cmt' + (isTrue(c.IsResolved) ? ' resolved' : '') + '">' +
+      metaRow(c.AuthorEmail, c.Timestamp) +
+      '<div class="cmt-body">' + linkifyMentions(c.TextContent) + '</div>' +
+      '<div class="cmt-actions">' +
+        '<button class="cmt-act" onclick="__cmtReply(\'' + c.CommentID + '\')">Reply</button>' +
+        '<button class="cmt-act" onclick="__cmtResolve(\'' + c.CommentID + '\',' + (!isTrue(c.IsResolved)) + ')">' + (isTrue(c.IsResolved) ? 'Reopen' : 'Resolve') + '</button>' +
+        (mine ? '<button class="cmt-act danger" onclick="__cmtDelC(\'' + c.CommentID + '\')">Delete</button>' : '') +
+      '</div>' +
+      (reps.length ? '<div class="cmt-replies">' + reps.map(function (r) {
+        var rmine = String(r.AuthorEmail).toLowerCase() === String(THREADS.me).toLowerCase();
+        return '<div class="cmt-reply">' + metaRow(r.AuthorEmail, r.Timestamp) +
+          '<div class="cmt-body">' + linkifyMentions(r.TextContent) + '</div>' +
+          (rmine ? '<div class="cmt-actions"><button class="cmt-act danger" onclick="__cmtDelR(\'' + r.ReplyID + '\')">Delete</button></div>' : '') +
+          '</div>';
+      }).join('') + '</div>' : '') +
+      '<div id="replybox-' + c.CommentID + '"></div>' +
+    '</div>';
+  }
+  function metaRow(email, ts) {
+    return '<div class="cmt-meta"><span class="cmt-avatar">' + esc(initials(email)) + '</span>' +
+      '<span class="cmt-author">' + esc(nameOf(email)) + '</span>' +
+      '<span class="cmt-time">' + esc(fmtTime(ts)) + '</span></div>';
+  }
+  function composerHtml(ctx, isReply) {
+    var id = isReply ? 'reply' : 'main';
+    return '<div class="cmt-composer" data-cmt-composer="' + id + '">' +
+      '<textarea id="cmt-ta-' + id + '" placeholder="' + (isReply ? 'Reply… use @ to mention' : 'Comment… use @ to mention') + '"></textarea>' +
+      '<div class="cmt-mentions" id="cmt-men-' + id + '"></div>' +
+      '<div class="cmt-composer-row"><span class="cmt-hint">@ to mention · ⌘/Ctrl+Enter to send</span>' +
+      (isReply ? '<button class="cmt-cancel" onclick="__cmtCancelReply()">Cancel</button>' : '') +
+      '<button class="cmt-submit" id="cmt-send-' + id + '">' + (isReply ? 'Reply' : 'Comment') + '</button></div></div>';
+  }
+
+  // ── composer wiring (mentions + submit) ─────────────────────────────────────
+  function wireComposer(scope) {
+    var ta = scope.querySelector('#cmt-ta-main'), send = scope.querySelector('#cmt-send-main');
+    if (ta) attachMentions(ta, scope.querySelector('#cmt-men-main'));
+    if (send) send.onclick = function () { submitMain(ta, send); };
+    if (ta) ta.addEventListener('keydown', function (e) { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submitMain(ta, send); });
+  }
+  // FPOPS-57: email-shaped @mention required before posting
+  var _HAS_MENTION = /@[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/;
+  function submitMain(ta, sendBtn) {
+    var text = ta.value.trim(); if (!text) return;
+    if (!_HAS_MENTION.test(text)) { toast('Tag at least one person (@mention) before posting.'); return; }
+    if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Posting…'; }
+    rpc('addComment', { targetElementId: openTarget, viewKey: viewKey(), anchorQuote: composerCtx && composerCtx.anchorQuote || firstQuote(openTarget), text: text }, function () {
+      if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Comment'; }
+      toast('Comment added'); ta.value = ''; loadThreads(function () { var el = document.querySelector('[data-comment-target="' + cssEsc(openTarget) + '"]'); openThread(openTarget, el); });
+    });
+  }
+  window.__cmtReply = function (cid) {
+    var box = document.getElementById('replybox-' + cid); if (!box) return;
+    if (box.innerHTML) { box.innerHTML = ''; return; }
+    box.innerHTML = composerHtml({}, true);
+    var ta = box.querySelector('#cmt-ta-reply'), btn = box.querySelector('#cmt-send-reply');
+    attachMentions(ta, box.querySelector('#cmt-men-reply')); ta.focus();
+    btn.onclick = function () {
+      var text = ta.value.trim(); if (!text) return;
+      if (!_HAS_MENTION.test(text)) { toast('Tag at least one person (@mention) before posting.'); return; }
+      btn.disabled = true; btn.textContent = 'Posting…';
+      rpc('addReply', { parentCommentId: cid, text: text, viewKey: viewKey() }, function () {
+        toast('Reply added'); loadThreads(function () { var el = document.querySelector('[data-comment-target="' + cssEsc(openTarget) + '"]'); openThread(openTarget, el); });
+      });
+    };
+    ta.addEventListener('keydown', function (e) { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') btn.click(); });
+  };
+  window.__cmtCancelReply = function () { document.querySelectorAll('[id^="replybox-"]').forEach(function (b) { b.innerHTML = ''; }); };
+  // Resolving CLOSES the popover (Google-Docs behaviour) instead of re-opening it, which used to
+  // re-render the just-resolved comment in place and made resolve look like it had done nothing.
+  // Reopening keeps the popover open — you want to see the comment you just brought back.
+  window.__cmtResolve = function (cid, val) {
+    rpc('setResolved', { id: cid, val: val }, function () {
+      var t = openTarget;
+      loadThreads(function () {
+        if (val && !SHOW_RESOLVED) { toast('Resolved'); __cmtClose(); return; }
+        openThread(t, document.querySelector('[data-comment-target="' + cssEsc(t) + '"]'));
+      });
+    });
+  };
+  window.__cmtDelC = function (cid) { if (!confirm('Delete this comment and its replies?')) return; rpc('deleteComment', cid, function () { toast('Deleted'); loadThreads(function () { __cmtClose(); }); }); };
+  window.__cmtDelR = function (rid) { rpc('deleteReply', rid, function () { loadThreads(function () { var el = document.querySelector('[data-comment-target="' + cssEsc(openTarget) + '"]'); openThread(openTarget, el); }); }); };
+  window.__cmtClose = function () { document.getElementById('cmt-pop').style.display = 'none'; openTarget = null; };
+
+  // ── @mention autocomplete ────────────────────────────────────────────────────
+  function attachMentions(ta, dd) {
+    var active = -1, matches = [];
+    ta.addEventListener('input', function () {
+      var res = mentionToken(ta); if (!res) { dd.style.display = 'none'; return; }
+      var looksLikeEmail = res.token.indexOf('@') > 0;
+      matches = THREADS.users.filter(function (u) {
+        var q = res.token.toLowerCase();
+        return String(u.Email).toLowerCase().indexOf(q) >= 0 || String(u.Name).toLowerCase().indexOf(q) >= 0;
+      }).slice(0, 6);
+      if (!matches.length && !looksLikeEmail) { dd.style.display = 'none'; return; }
+      active = 0;
+      dd.innerHTML = matches.map(function (u, i) { return '<div class="cmt-mention-row' + (i === 0 ? ' active' : '') + '" data-i="' + i + '"><span class="cmt-mention-name">' + esc(u.Name || u.Email) + '</span><span class="cmt-mention-email">' + esc(u.Email) + '</span></div>'; }).join('');
+      var addToken = res.token;
+      if (looksLikeEmail) {
+        dd.innerHTML += '<div class="cmt-mention-row cmt-add-row"><span class="cmt-mention-name">+ Add ' + esc(addToken) + ' to team</span></div>';
+      }
+      dd.style.display = 'block';
+      dd.querySelectorAll('.cmt-mention-row:not(.cmt-add-row)').forEach(function (row) { row.onclick = function () { pick(+row.getAttribute('data-i')); }; });
+      var addRow = dd.querySelector('.cmt-add-row');
+      if (addRow) addRow.onclick = function() {
+        rpc('addUserToDirectory', { email: addToken }, function(result) {
+          if (!result.alreadyExists) {
+            THREADS.users.push({ Name: result.name, Email: result.email });
+            toast(result.name + ' added to team directory');
+          }
+          var mr = mentionToken(ta);
+          if (mr) {
+            var before = ta.value.slice(0, mr.start), after = ta.value.slice(ta.selectionStart);
+            ta.value = before + '@' + result.email + ' ' + after;
+            var pos = (before + '@' + result.email + ' ').length;
+            ta.setSelectionRange(pos, pos);
+          }
+          dd.style.display = 'none'; ta.focus();
+        });
+      };
+    });
+    ta.addEventListener('keydown', function (e) {
+      if (dd.style.display !== 'block') return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); active = (active + 1) % matches.length; hl(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); active = (active - 1 + matches.length) % matches.length; hl(); }
+      else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); pick(active); }
+      else if (e.key === 'Escape') { dd.style.display = 'none'; }
+    });
+    function hl() { dd.querySelectorAll('.cmt-mention-row').forEach(function (r, i) { r.classList.toggle('active', i === active); }); }
+    function pick(i) {
+      var u = matches[i]; if (!u) return;
+      var res = mentionToken(ta); if (!res) return;
+      var before = ta.value.slice(0, res.start), after = ta.value.slice(ta.selectionStart);
+      ta.value = before + '@' + u.Email + ' ' + after;
+      var pos = (before + '@' + u.Email + ' ').length; ta.setSelectionRange(pos, pos);
+      dd.style.display = 'none'; ta.focus();
+    }
+  }
+  // find an @token immediately before the caret
+  function mentionToken(ta) {
+    var caret = ta.selectionStart, text = ta.value.slice(0, caret);
+    var m = /@([A-Za-z0-9._%+\-@.]*)$/.exec(text);
+    if (!m) return null;
+    return { token: m[1], start: caret - m[0].length };
+  }
+
+  // ── "comment on anything": text selection + element hover ────────────────────
+  var selBtn = document.getElementById('cmt-sel-btn');
+  var hoverBtn = document.getElementById('cmt-hover-btn');
+  var main = null;
+  function mainEl() { return main || (main = document.querySelector('.main-content') || document.body); }
+
+  document.addEventListener('mouseup', function (e) {
+    if (e.target === selBtn) return;
+    var sel = window.getSelection();
+    var text = sel && sel.toString().trim();
+    if (!text || text.length < 2) { selBtn.style.display = 'none'; return; }
+    var node = sel.anchorNode; var host = node && (node.nodeType === 1 ? node : node.parentElement);
+    var targetEl = host && host.closest('[data-comment-target]');
+    if (!targetEl || !mainEl().contains(targetEl)) { selBtn.style.display = 'none'; return; }
+    var rect = sel.getRangeAt(0).getBoundingClientRect();
+    selBtn.style.left = (window.scrollX + rect.left) + 'px';
+    selBtn.style.top = (window.scrollY + rect.bottom + 6) + 'px';
+    selBtn.style.display = 'block';
+    selBtn.onclick = function () {
+      selBtn.style.display = 'none';
+      var t = targetEl.getAttribute('data-comment-target');
+      composerCtx = { anchorQuote: text.slice(0, 280) };
+      openComposerFor(t, targetEl, text.slice(0, 280));
+      sel.removeAllRanges();
+    };
+  });
+  document.addEventListener('scroll', function () { selBtn.style.display = 'none'; }, true);
+
+  // hover affordance on any targetable element
+  document.addEventListener('mouseover', function (e) {
+    var el = e.target.closest && e.target.closest('[data-comment-target]');
+    if (!el) return;
+    var r = el.getBoundingClientRect();
+    hoverBtn.style.left = (window.scrollX + r.right - 32) + 'px';
+    hoverBtn.style.top = (window.scrollY + r.top + 6) + 'px';
+    hoverBtn.style.display = 'flex';
+    hoverBtn.onclick = function () { hoverBtn.style.display = 'none'; openComposerFor(el.getAttribute('data-comment-target'), el, ''); };
+    hoverBtn._el = el;
+  });
+  document.addEventListener('mouseout', function (e) {
+    var to = e.relatedTarget;
+    if (to === hoverBtn) return;
+    var el = e.target.closest && e.target.closest('[data-comment-target]');
+    if (el && el === hoverBtn._el && (!to || !el.contains(to))) hoverBtn.style.display = 'none';
+  });
+
+  // open the popover with focus in the composer (existing thread or new)
+  function openComposerFor(target, el, quote) {
+    openThread(target, el);
+    composerCtx = { targetElementId: target, viewKey: viewKey(), anchorQuote: quote || firstQuote(target) };
+    var ta = document.querySelector('#cmt-pop #cmt-ta-main'); if (ta) ta.focus();
+  }
+  // allCommentsFor, not commentsFor: the anchor quote describes the block, so it must survive
+  // every comment on that block being resolved.
+  function firstQuote(target) { var l = allCommentsFor(target); return (l[0] && l[0].AnchorQuote) || (composerCtx && composerCtx.anchorQuote) || ''; }
+
+  // ── positioning / reposition on scroll+resize ────────────────────────────────
+  function positionPop(pop, anchorEl) {
+    if (!anchorEl) { pop.style.left = (window.scrollX + 80) + 'px'; pop.style.top = (window.scrollY + 120) + 'px'; return; }
+    var r = anchorEl.getBoundingClientRect(), w = 340;
+    var left = window.scrollX + Math.min(r.left, window.innerWidth - w - 16);
+    var top = window.scrollY + r.bottom + 8;
+    pop.style.left = Math.max(8, left) + 'px'; pop.style.top = top + 'px';
+  }
+  window.addEventListener('resize', function () { if (openTarget) { var el = document.querySelector('[data-comment-target="' + cssEsc(openTarget) + '"]'); if (el) positionPop(document.getElementById('cmt-pop'), el); } });
+
+  // ── deep link from @mention email ────────────────────────────────────────────
+  var _deepDone = false, _deepSwitched = false;
+  function maybeDeepOpen() {
+    if (_deepDone || !DEEP.commentId) return;
+    var c = THREADS.comments.filter(function (x) { return String(x.CommentID) === String(DEEP.commentId); })[0];
+    if (!c) return;
+    var el = document.querySelector('[data-comment-target="' + cssEsc(c.TargetElementID) + '"]');
+    if (!el && !_deepSwitched && DEEP.view && window.switchView) {
+      _deepSwitched = true;
+      window.switchView(DEEP.view);
+      return;
+    }
+    if (!el) return;
+    _deepDone = true;
+    // An @mention email can point at a comment that has since been auto-resolved by the 7-day
+    // trigger. Following that link must still show it, so reveal resolved for this open.
+    if (isTrue(c.IsResolved)) SHOW_RESOLVED = true;
+    setTimeout(function () { el.scrollIntoView({ block: 'center' }); openThread(c.TargetElementID, el); }, 0);
+  }
+
+  // ── helpers ────────────────────────────────────────────────────────────────
+  function viewKey() { return String(window.currentView || ''); }
+  function isTrue(v) { return v === true || v === 'true' || v === 'TRUE' || v === 1; }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function cssEsc(s) { return String(s).replace(/["\\]/g, '\\$&'); }
+  function linkifyMentions(t) { return esc(t).replace(/@([A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,})/g, '<span class="mention">@$1</span>'); }
+  function nameOf(email) { var u = (THREADS.users || []).filter(function (x) { return String(x.Email).toLowerCase() === String(email).toLowerCase(); })[0]; return u ? (u.Name || u.Email) : email; }
+  function initials(email) { var n = nameOf(email); var p = String(n).replace(/@.*/, '').split(/[.\s]+/); return ((p[0] || '?')[0] + (p[1] || '')[0] || '').toUpperCase() || '?'; }
+  function prettyTarget(t) { var s = String(t).split(':'); return (s[0] || 'element').toUpperCase() + (s[1] ? ' · ' + s[1].replace(/_/g, ' ') : ''); }
+  function fmtTime(ts) { try { var d = new Date(ts); return d.toLocaleString(); } catch (e) { return ts; } }
+  var toastT = null;
+  function toast(msg) { var el = document.getElementById('cmt-toast'); el.textContent = msg; el.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(function () { el.style.display = 'none'; }, 2200); }
+
+  // ── welcome overlay for first-time users ──────────────────────────────────────
+  function showWelcome(name) {
+    var div = document.createElement('div');
+    div.id = 'cmt-welcome';
+    div.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(2,2,38,.55);display:flex;align-items:center;justify-content:center';
+    div.innerHTML = '<div style="background:#fff;border-radius:16px;padding:28px 32px;max-width:380px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.35)">' +
+      '<div style="font-size:28px;margin-bottom:8px">👋</div>' +
+      '<div style="font:700 16px \'Century Gothic\',Arial;color:#020226;margin-bottom:6px">Welcome, ' + esc(name) + '!</div>' +
+      '<div style="font-size:13px;color:#555;margin-bottom:20px">You\'ve been added to the team directory. Colleagues can now @mention you in comments.</div>' +
+      '<button style="background:#FA4F2D;color:#fff;border:none;border-radius:8px;padding:10px 24px;font:700 13px \'Century Gothic\',Arial;cursor:pointer">Got it</button>' +
+      '</div>';
+    div.querySelector('button').onclick = function() { div.remove(); };
+    document.body.appendChild(div);
+    setTimeout(function() { if (div.parentNode) div.remove(); }, 6000);
+  }
+
+  // ── boot: load after first paint; poll + refresh on focus ────────────────────
+  function start() {
+    rpc('ensureUserRegistered', null, function(reg) {
+      if (reg && reg.email) THREADS.me = reg.email;
+      if (reg && reg.isNew) {
+        if (!localStorage['wbr_onboarding_done']) {
+          window.startOnboarding && window.startOnboarding({firstRun: true, name: reg.name});
+        } else {
+          showWelcome(reg.name);
+        }
+      }
+      loadThreads();
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+  window.addEventListener('focus', function () { loadThreads(); });
+  setInterval(function () { if (document.hasFocus()) loadThreads(); }, 45000);
+})();
+</script>
